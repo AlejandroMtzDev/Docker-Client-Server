@@ -1,0 +1,18 @@
+# Docker funciona con servicios, un servicio es igual a un contenedor
+# Un servicio puede ser un cliente, un servidor, una base de datos, etc
+# Para crear los servicios se usa la palabra clave 'services'
+services:
+  # Primer servicio (contenedor): el server
+  # En este caso se puede utilizar cualquier palabra para el servicio
+  server:
+    build: server/
+    command: python ./server.py
+    ports:
+      - 4333:4333
+  # Segundo servicio: el cliente
+  client:
+    build: client/
+    command: python ./client.py
+    network_mode: host
+    depends_on:
+      - server
