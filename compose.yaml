@@ -9,10 +9,19 @@ services:
     command: python ./server.py
     ports:
       - 4333:4333
+    networks:
+      - server_net
   # Segundo servicio: el cliente
   client:
     build: client/
     command: python ./client.py
-    network_mode: host
     depends_on:
       - server
+    networks:
+      - server_net
+
+# Configuracion de redes
+networks:
+  # Nombre de la red
+  server_net:
+    driver: bridge # Establece la red en modo bridge para poder conectar contenedores

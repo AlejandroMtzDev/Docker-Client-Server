@@ -2,31 +2,139 @@ from socket import socket, AF_INET, SOCK_STREAM
 import logging
 from threading import Thread
 import argparse
+import json
 
-parser = argparse.ArgumentParser(description='Client')
-parser.add_argument('--host', type=str, default=)
+message = {
+    "type": "OperationType",
+    "data": {}
+}
+
+session = {
+    "ID": -0,
+    "User": "#"
+}
 
 class ChatClient:
     def __init__(self, host, port):
         self.logger = self._setup_logger()
         self.sock = self._setup_socket(host, port)
 
-        thread = Thread(target = self.send_message)
-        thread.daemon = True
-        thread.start()
+        self.start_comms()
 
+    # Enviar mensaje y recibir respuesta del servidor
+    def manage_comms(self, encoded_data):
+        try:
+            self.sock.send(encoded_data)
+            server_response = self.sock.recv(1024)
+            decoded_response = json.loads(server_response.decode("utf-8"))
+
+            if decoded_response["type"] == "LOGIN_RES":
+                session["ID"] = decoded_response["data"]["ID"]
+                session["User"] = decoded_response["data"]["User"]
+
+                print("Sesión iniciada")
+            elif decoded_response["type"] == "NEW_USR_RES":
+                session["ID"] = decoded_response["data"]["ID"]
+                session["User"] = decoded_response["data"]["User"]
+
+                print("Usuario creado, iniciando sesión")
+            elif decoded_response["type"] == "GAMES_LIST_RES":
+                games_res = decoded_response["data"]
+                games_str = json.dumps(games_res, indent=4)
+
+                print(games_str)
+                inpt = input("ID de juego: ")
+
+        except Exception as e:
+            print(e)
+
+    # Acciones del usuario
+    def select_operation(self, user_op):
+        if user_op == "1" and session["ID"] == -0:
+            self.login()
+        elif user_op == "2":
+            self.sign_up()
+        elif user_op == "1" and session["ID"] != -0:
+            self.pruchase_game()
+            
+    # Inicio de sesion
+    def login(self):
+        print("Para iniciar sesión proporcione su usuario y contraseña")
+        user = input("User: ")
+        psswrd = input("Password: ")
+
+        login_data = {
+            "user": user,
+            "password": psswrd
+        }
+
+        message["type"] = "LOGIN"
+        message["data"] = login_data
+
+        # Convertir diccionario a bytes para enviar mensaje al servidor
+        response = json.dumps(message).encode("utf-8")
+
+        self.manage_comms(response)
+
+    # Registro de usuario
+    def sign_up(self):
+        print("Asigne un nombre de usuario y contraseña para su perfil")
+        user = input("Nombre de usuario: ")
+        psswrd = input("Contraseña: ")
+
+        new_user_data = {
+            "user": user,
+            "password": psswrd
+        }
+
+        message["type"] = "NEW_USR"
+        message["data"] = new_user_data
+
+        response = json.dumps(message).encode("utf-8")
+
+        self.manage_comms(response)
+
+    # Agregar juego a perfil de usuario
+    def pruchase_game(self):
+        print("Para continuar con su compra seleccione un juego de la lista")
+        self.games_list()
+
+    # Ver juegos disponibles
+    def games_list(self):
+        message = {
+            "type": "GAMES_LIST",
+            "data": {}
+        }
+
+        response = json.dumps(message).encode("utf-8")
+
+        self.manage_comms(response)
+
+    # Muestra en consola las operaciones que el usuario puede hacer y envia la seleccion al servidor
+    def start_comms(self):
         while True:
-            data = self.sock.recv(4096)
 
-            #Termina el proceso si el servidor se desconecta u ocurre un error
-            if not data:
-                break
-            self.logger.info(data.decode())
+            if session["ID"] == -0 and session["User"] == "#":
+                print('''
+                === BIENVENIDO A GAMEACCOUNT. SELECCIONA UNA OPCIÓN PARA CONTINUAR ===
+                1.- Iniciar sesión
+                2.- Crear usuario
+                ''')
+                user_op = input("Selecciona el número de la operación: ")
+            else:
+                print(f'''
+                === BIENVENIDO {session["User"]}. SELECCIONA UNA OPCIÓN PARA CONTINUAR ===
+                1.- Comprar juego
+                2.- Consultar lista de juegos
+                3.- Consultar datos de un juego
+                4.- Remover juego de biblioteca
+                5.- Editar nombre de usuario
+                6.- Cambiar contraseña
+                7.- Cerrar sesión
+                ''')
+                user_op = input("Selecciona el número de la operación: ")
 
-    def send_message(self):
-        while True:
-            user_message = input()
-            self.sock.send(user_message.encode('utf-8', 'backslashreplace'))
+            self.select_operation(user_op)
 
     @staticmethod
     def _setup_socket(host, port):
