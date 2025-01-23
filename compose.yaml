@@ -19,6 +19,8 @@ services:
       - server
     networks:
       - server_net
+    stdin_open: true
+    tty: true
 
 # Configuracion de redes
 networks:

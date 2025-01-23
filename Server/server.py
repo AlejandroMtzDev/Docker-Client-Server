@@ -1,8 +1,10 @@
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 import logging
 from concurrent.futures import ThreadPoolExecutor
-import datetime
 import json
+
+HOST = "0.0.0.0"
+PORT = 4333
 
 response = {
     "type": "OperationType",
@@ -56,11 +58,25 @@ class ChatServer:
             return self.create_user()
         elif (message["type"] == "GAMES_LIST"):
             return self.games_list()
+        elif (message["type"] == "GAME_SELECTION"): # Proceso para comprar un juego            
+            id = message["data"]["Game_ID"]
+            return self.game_purchase(id)
+        elif (message["type"] == "USER_GAMES_LIST"):
+            return self.user_games_list()
+        elif (message["type"] == "EDIT_PASSWORD"):
+            return self.edit_user_password(message["data"])
+        elif (message["type"] == "EDIT_USERNAME"):
+            return self.edit_username(message["data"])
+        elif (message["type"] == "LOGOUT"):
+            return self.logout()
+        else:
+            return "Operación inválida"
 
     # Inicio de sesion
     def login(self):
         self.logger.debug("Inicio de sesión")
         
+        # Despues de recibir los datos del usuario y procesar los 
         session = {
             "ID": 1,
             "User": "Alejandro"
@@ -90,14 +106,43 @@ class ChatServer:
         return server_response
 
     # Agregar juego nuevo a cuenta de usuario
-    def pruchase_game(self):
+    def game_purchase(self, id):
         self.logger.debug("Compra de juego")
 
+        games = [
+            {
+                "ID": 1,
+                "Name": "Juego A",
+                "Genre": "Genero A"
+            },
+            {
+                "ID": 2,
+                "Name": "Juego B",
+                "Genre": "Genero B"
+            },
+            {
+                "ID": 3,
+                "Name": "Juego C",
+                "Genre": "Genero C"
+            },
+            {
+                "ID": 4,
+                "Name": "Juego D",
+                "Genre": "Genero D"
+            }
+        ]
+
         game_data = {
-            "ID": 1,
-            "Name": "Juego chingón",
-            "Genre": "Plomazos"
+            "ID": 0,
+            "Name": "a",
+            "Genre": "b"
         }
+
+        for x in games:
+            if x["ID"] == int(id):
+                game_data["ID"] = x["ID"]
+                game_data["Name"] = x["Name"]
+                game_data["Genre"] = x["Genre"]
 
         response["type"] = "NEW_GAME"
         response["data"] = game_data
@@ -113,28 +158,129 @@ class ChatServer:
         games = [
             {
                 "ID": 1,
-                "Name": "Juego chingón",
-                "Genre": "Plomazos"
-            },
-            {
-                "ID": 2,
                 "Name": "Juego A",
                 "Genre": "A"
             },
             {
-                "ID": 3,
+                "ID": 2,
                 "Name": "Juego B",
                 "Genre": "B"
             },
             {
-                "ID": 4,
+                "ID": 3,
                 "Name": "Juego C",
                 "Genre": "C"
+            },
+            {
+                "ID": 4,
+                "Name": "Juego D",
+                "Genre": "D"
             }
         ]
 
         response["type"] = "GAMES_LIST_RES"
         response["data"] = games
+
+        server_response = json.dumps(response).encode("utf-8")
+
+        return server_response
+    
+    # Peticion para obtener los juegos del usuario
+    def user_games_list(self):
+        self.logger.debug("Juegos del usuario")
+
+        user_games = [
+            {
+                "ID": 1,
+                "Name": "Juego A",
+                "Genre": "A"
+            },
+            {
+                "ID": 2,
+                "Name": "Juego B",
+                "Genre": "B"
+            }
+        ]
+
+        response["type"] = "USER_GAMES_LIST_RES"
+        response["data"] = user_games
+
+        server_response = json.dumps(response).encode("utf-8")
+
+        return server_response
+
+    # Cambio de contraseña
+    def edit_user_password(self, data):
+        self.logger.debug("Cambio de contaseña")
+
+        # Objeto que ilustra un usuario en la base de datos
+        user_data = {
+            "User_ID": 1,
+            "UserName": "Alejandro",
+            "Password": "Psswrd"
+        }
+
+        # Objeto que servira para notificar al usuario el resultado de su operacion
+        op_response = {
+            "Status": "a",
+            "Message": "b"
+        }
+
+        # El servidor procesa la operacion del usuario y si determina que la contraseña
+        # coincide con aquella almacenada en la "base de datos" envia un mensaje al usuario
+        # notificandole si su solicitud tuvo exito o no
+        if data["OldPassword"] == user_data["Password"]:
+            op_response["Status"] = "Success"
+            op_response["Message"] = "Su contraseña ha sido cambiada con éxito"
+        else:
+            op_response["Status"] = "Failure"
+            op_response["Message"] = "Las contraseñas no coinciden, intente otra vez"
+
+        response["type"] = "EDIT_PASSWORD_RES"
+        response["data"] = op_response
+
+        server_response = json.dumps(response).encode("utf-8")
+
+        return server_response
+
+    # Cambio de username
+    def edit_username(self, data):
+        self.logger.debug("Cambio de nombre de usuario")
+
+        # Objeto que ilustra un usuario en la base de datos
+        user_data = {
+            "User_ID": 1,
+            "UserName": "Alejandro",
+            "Password": "Psswrd"
+        }
+
+        op_response = {
+            "NewUsername": data,
+            "Message": "Nombre de usuario actualizado con éxito"
+        }
+
+        # El servidor cambia el username del usuario en la "base de datos"
+        user_data["UserName"] = data
+
+        response["type"] = "EDIT_USERNAME_RES"
+        response["data"] = op_response
+
+        server_response = json.dumps(response).encode("utf-8")
+
+        return server_response
+
+    # Cerrar sesion
+    def logout(self):
+        self.logger.debug("Cerrar sesion de usuario")
+
+        # El servidor recibe la solicitud del usuario y manda una respuesta
+        session = {
+            "ID": -0,
+            "User": "#"
+        }
+
+        response["type"] = "LOGOUT_RES"
+        response["data"] = session
 
         server_response = json.dumps(response).encode("utf-8")
 
@@ -156,5 +302,5 @@ class ChatServer:
         return logger
 
 if __name__ == "__main__":
-    server = ChatServer('localhost', 4333)
+    server = ChatServer(HOST, PORT)
     server.run()
