@@ -63,7 +63,7 @@ class ChatClient:
             response = json.dumps(message).encode("utf-8")
 
             self.manage_comms(response)
-        elif decoded_response["type"] == "NEW_GAME": # Respuesta con el juego comprado
+        elif decoded_response["type"] == "NEW_GAME_RES": # Respuesta con el juego comprado
             new_game = decoded_response["data"]
             user_data["GamesList"] = new_game
 

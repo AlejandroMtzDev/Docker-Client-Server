@@ -43,14 +43,14 @@ class ChatServer:
                 self.logger.debug("Datos recibidos")
 
                 # Manejar datos y respuesta
-                connection.send(self.handle_messages(msg, addr))
+                connection.send(self.handle_messages(msg))
 
             if not data:
                 self.logger.warning("No se han recibido datos. Terminando proceso.")
                 break
 
     # Recibir mensaje y procesar operacion
-    def handle_messages(self, data, addr):
+    def handle_messages(self, data):
         message = data
         if (message["type"] == "LOGIN"):
             return self.login()
@@ -144,7 +144,7 @@ class ChatServer:
                 game_data["Name"] = x["Name"]
                 game_data["Genre"] = x["Genre"]
 
-        response["type"] = "NEW_GAME"
+        response["type"] = "NEW_GAME_RES"
         response["data"] = game_data
 
         server_response = json.dumps(response).encode("utf-8")
